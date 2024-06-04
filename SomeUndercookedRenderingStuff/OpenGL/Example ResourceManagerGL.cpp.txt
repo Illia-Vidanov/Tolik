@@ -1,0 +1,38 @@
+#include "Rendering/OpenGL/ResourceManagerGL.hpp"
+
+#include <vector>
+#include <unordered_map>
+#include <array>
+#include <stdint.h>
+
+#include "Rendering/OpenGL/ShaderGL.hpp"
+#include "Rendering/OpenGL/BuffersGL.hpp"
+#include "Rendering/Renderer.hpp"
+
+namespace Tolik
+{
+ResourceManagerGL::ResourceManagerGL()
+  : m_indexes
+  {
+    { 0, 0, 0 }
+  },
+  m_shaders
+  {
+    ShaderGL("libs/ToliksLib/Code/res/Shaders/Default.vert", "libs/ToliksLib/Code/res/Shaders/Default.frag")
+  },
+  m_layouts
+  {
+    BufferLayoutGL(GL_FLOAT, 3, GL_FALSE)
+  },
+  m_drawModes
+  {
+    GL_TRIANGLES
+  }
+{}
+
+ResourceManagerGL::~ResourceManagerGL()
+{
+  for(uint32_t i = 0; i < m_shaders.size(); i++)
+    m_shaders[i].Delete();
+}
+}
