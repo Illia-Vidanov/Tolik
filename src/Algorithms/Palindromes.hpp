@@ -3,6 +3,7 @@
 
 #include <functional>
 #include <utility>
+#include <iostream>
 
 #include "gcem.hpp"
 
@@ -253,13 +254,26 @@ constexpr void IteratePalindromes(ReturnType &number, U digit, U totalDigits, Fu
 {
     ReturnType diff = GetDiff<ReturnType>(digit, totalDigits);
 
-    for(uint8_t i = 0; i < 9; i++)
+	if(digit == totalDigits)
+		number = number + diff;
+
+    for(uint8_t i = 0 + (digit == totalDigits); i < 9; i++)
     {
-        number = number + diff;
-        callback(number);
         if(U(2) < digit)
-            IteratePalindromes(number, digit - U(2), totalDigits, callback);
+		{
+			IteratePalindromes(number, digit - U(2), totalDigits, callback);
+			number = number + diff;
+			continue;
+		}
+		
+		callback(number);
+		number = number + diff;
     }
+
+	if(U(2) < digit)
+		IteratePalindromes(number, digit - U(2), totalDigits, callback);
+	else
+		callback(number);
 
     number = number - diff * ReturnType(9);
 }
