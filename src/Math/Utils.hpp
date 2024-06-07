@@ -4,17 +4,16 @@
 #include <type_traits>
 #include <cmath>
 
-#include "Setup.hpp"
-
 #include "gcem.hpp"
 
+#include "Setup.hpp"
 #include "Math/Constants.hpp"
 
 namespace Tolik
 {
 // If type is custom it's better to leave it as is
 template<typename T>
-using ReturnFloatType = std::conditional_t<!std::is_floating_point_v<T> && !std::is_arithmetic_v<T>, DefFloatType, T>;
+using ReturnFloatType = std::conditional_t<std::is_integral_v<T>, DefFloatType, T>;
 
 
 template<typename T>
@@ -30,31 +29,45 @@ template<typename T, typename U>
 constexpr inline bool AreSame(T t, U u)
 { return gcem::abs(t - u) < Elipson; }
 
+// Shorthand of writing (std::numeric_limits<T>::digits10 + 1)
+template<typename T>
+constexpr inline static int kMaxDigits = std::numeric_limits<T>::digits10 + 1;
 
-namespace Detail
+
+namespace detail
 {
 // https://en.wikipedia.org/wiki/Exponentiation_by_squaring
 
-template<typename T, typename U>
-constexpr ReturnFloatType<T> IntegralPowerIterate(T base, U exp)
+// Exponent here can be only positive, thus unsigned long long
+template<typename T, typename U, std::enable_if_t<std::is_convertible_v<U, uint64_t>, bool> = true>
+constexpr T IntegralPowerIterate(const T base, const U exp)
 {
-    if(exp == 1)
+    // Use cast in case, for example float, or custom defined type, idk
+    if(static_cast<uint64_t>(exp) == 1)
         return base;
     
-    if(exp % 2 == 0)
-        return IntegralPowerIterate(base * base, exp / 2);
+    if(static_cast<uint64_t>(exp) % 2 == 0)
+        return IntegralPowerIterate(base * base, static_cast<uint64_t>(exp) / 2);
     //                                      rounds to 0 automatically
-    return base * IntegralPowerIterate(base * base, exp / 2);
+    return base * IntegralPowerIterate(base * base, static_cast<uint64_t>(exp) / 2);
 }
 
-
-template<typename T, typename U, std::enable_if_t<std::is_arithmetic_v<T>, bool> = true>
-constexpr inline ReturnFloatType<T> IntegralPowerImpl(T base, U exp) { return std::pow(base, exp); }
-
-// It's probably worth to take into account that special type might be signed
-template<typename T, typename U, std::enable_if_t<!std::is_arithmetic_v<T>, bool> = true>
-constexpr inline T IntegralPowerImpl(T base, U exp)
+template<typename T, typename U, std::enable_if_t<!std::is_convertible_v<U, uint64_t>, bool> = true>
+constexpr T IntegralPowerIterate(const T base, const U exp)
 {
+    if(exp < 2)
+        return base;
+
+    return base * IntegralPowerIterate(base, exp - 1);
+}
+
+template<typename T, typename U, std::enable_if_t<std::is_arithmetic_v<T> && std::is_arithmetic_v<U>, bool> = true>
+constexpr inline T IntegralPowerImpl(const T base, const U exp) { return std::pow(base, exp); }
+
+template<typename T, typename U, std::enable_if_t<!std::is_arithmetic_v<T>, bool> = true>
+constexpr inline T IntegralPowerImpl(const T base, const U exp)
+{
+    // Special type might be signed
     if(exp < 0)
         return T(1) / IntegralPowerImpl(base, -exp);
     if(exp == 0)
@@ -64,13 +77,13 @@ constexpr inline T IntegralPowerImpl(T base, U exp)
 }
 }
 
-// Function to power unknown type.
-// If it's normalt type std::pow is used.
-// In other case power algorithm is used, that uses only operators '=' '*' '/' '=='
+// Function to power non-arithemtic type to exponent of non-arithmetic type.
+// If it's normal types std::pow is used.
+// In other case, power algorithm is used, that uses only operators '=' '*' '/' '== '<'
 template<typename T, typename U>
-constexpr inline ReturnFloatType<T> IntegralPower(T base, U exp)
+constexpr inline T IntegralPower(const T base, const U exp)
 {
-    return Detail::IntegralPowerImpl(base, exp);
+    return detail::IntegralPowerImpl(base, exp);
 }
 
 
@@ -87,7 +100,78 @@ constexpr inline T GetDigit(U u, V index)
 }
 
 
-namespace Detail
+namespace detail
+{
+template<typename T>
+constexpr inline T kFastPower10PositiveLookup[] =
+{
+    1, 10, 100, kMaxDigits<T> > 3 ? 1000 : 0,
+    kMaxDigits<T> > 4 ?  gcem::pow<T, T>(10, 4) : 0,  kMaxDigits<T> > 5 ?  gcem::pow<T, T>(10, 5) : 0,  kMaxDigits<T> > 6 ?  gcem::pow<T, T>(10, 6) : 0,  kMaxDigits<T> > 7 ?  gcem::pow<T, T>(10, 7) : 0,
+    kMaxDigits<T> > 8 ?  gcem::pow<T, T>(10, 8) : 0,  kMaxDigits<T> > 9 ?  gcem::pow<T, T>(10, 9) : 0,  kMaxDigits<T> > 10 ? gcem::pow<T, T>(10, 10) : 0, kMaxDigits<T> > 11 ? gcem::pow<T, T>(10, 11) : 0, 
+    kMaxDigits<T> > 12 ? gcem::pow<T, T>(10, 12) : 0, kMaxDigits<T> > 13 ? gcem::pow<T, T>(10, 13) : 0, kMaxDigits<T> > 14 ? gcem::pow<T, T>(10, 14) : 0, kMaxDigits<T> > 15 ? gcem::pow<T, T>(10, 15) : 0,
+    kMaxDigits<T> > 16 ? gcem::pow<T, T>(10, 16) : 0, kMaxDigits<T> > 17 ? gcem::pow<T, T>(10, 17) : 0, kMaxDigits<T> > 18 ? gcem::pow<T, T>(10, 18) : 0, kMaxDigits<T> > 19 ? gcem::pow<T, T>(10, 19) : 0
+};
+
+constexpr inline DefFloatType kFastPower10NegativeLookup[] =
+{
+    static_cast<DefFloatType>(1), static_cast<DefFloatType>(1) / 10, static_cast<DefFloatType>(1) / 100, static_cast<DefFloatType>(1) / 1000,
+    static_cast<DefFloatType>(1) / gcem::pow<uint64_t, uint64_t>(10, 4),  static_cast<DefFloatType>(1) / gcem::pow<uint64_t, uint64_t>(10, 5),  static_cast<DefFloatType>(1) / gcem::pow<uint64_t, uint64_t>(10, 6),  static_cast<DefFloatType>(1) / gcem::pow<uint64_t, uint64_t>(10, 7),
+    static_cast<DefFloatType>(1) / gcem::pow<uint64_t, uint64_t>(10, 8),  static_cast<DefFloatType>(1) / gcem::pow<uint64_t, uint64_t>(10, 9),  static_cast<DefFloatType>(1) / gcem::pow<uint64_t, uint64_t>(10, 10), static_cast<DefFloatType>(1) / gcem::pow<uint64_t, uint64_t>(10, 11), 
+    static_cast<DefFloatType>(1) / gcem::pow<uint64_t, uint64_t>(10, 12), static_cast<DefFloatType>(1) / gcem::pow<uint64_t, uint64_t>(10, 13), static_cast<DefFloatType>(1) / gcem::pow<uint64_t, uint64_t>(10, 14), static_cast<DefFloatType>(1) / gcem::pow<uint64_t, uint64_t>(10, 15),
+    static_cast<DefFloatType>(1) / gcem::pow<uint64_t, uint64_t>(10, 16), static_cast<DefFloatType>(1) / gcem::pow<uint64_t, uint64_t>(10, 17), static_cast<DefFloatType>(1) / gcem::pow<uint64_t, uint64_t>(10, 18), static_cast<DefFloatType>(1) / gcem::pow<uint64_t, uint64_t>(10, 19)
+};
+}
+
+// Function to get power of 10 with lookup
+template<typename T = DefIntType, typename U>
+#if __cplusplus >= 202002L
+constexpr
+#endif
+inline T FastPower10(U exp)
+{
+    if constexpr(!std::is_arithmetic_v<T> || !std::is_arithmetic_v<U>)
+        return IntegralPower(T(10), exp);
+    else if(std::is_signed_v<U>)
+    {
+        if(exp < U(0))
+            return detail::kFastPower10NegativeLookup[-exp];
+        else if(U(19) < exp)
+            return IntegralPower(T(10), exp);
+        else
+            return detail::kFastPower10PositiveLookup<T>[exp];
+    }
+
+    if(U(19) < exp)
+        return IntegralPower(T(10), exp);
+    else
+        return detail::kFastPower10PositiveLookup<T>[exp];
+}
+
+
+// Get substring from digit
+// Same as (digit / 10^first) % 10^last
+// first digit inclusive, last exclusive
+// Example: first = 1, last = 5, digit = 6543210 => 4321;
+//          first = 4, last = 8, digit = -6543210 => 654;
+//          first = -10, last = 5, digit = -6543210 => 43210;
+template<typename T, typename U>
+constexpr inline T GetDigitSubstring(T digit, U first, U last)
+{
+    // I am not  sure about this line.
+    // It might be better to throw an error, but it means we need to check for it anyway, so I would prefer doing it this way
+    // If we'll ignore the fact of negative numbers we'll get SIGFPE that is hard to debug
+    if(first < 0)
+        first = 0;
+    if(last < 0)
+        return 0;
+    if(first >= last)
+        return 0;
+
+    return (digit / IntegralPower(10, first)) % IntegralPower(10, last - first);
+}
+
+
+namespace detail
 {
 template <typename T>
 constexpr inline DefUIntType NumberDigitsImpl(T t)
@@ -365,10 +449,11 @@ constexpr inline DefUIntType NumberDigitsImpl<unsigned long long>(unsigned long 
 }
 
 // Get number of whole digits in any type
+// 0 = 0 digits
 template<typename U = DefUIntType, typename T>
 constexpr inline U NumberDigits(T t)
 {
-    return t == 0 ? 0 : static_cast<U>(Detail::NumberDigitsImpl(t));
+    return t == 0 ? 0 : static_cast<U>(detail::NumberDigitsImpl(t));
 }
 }
 
