@@ -5,7 +5,7 @@
 
 namespace Tolik
 {
-namespace Detail
+namespace detail
 {
 static constexpr unsigned int crcTable[256] = {
   0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419, 0x706af48f,
@@ -62,13 +62,13 @@ constexpr uint32_t Crc32<std::size_t(-1)>(__attribute__((unused)) const char *st
 { return 0xFFFFFFFF; }
 }
 
-#define HASH_STRING(x) (Detail::Crc32<sizeof(x) - 1>(x))
+#define HASH_STRING(x) (detail::Crc32<sizeof(x) - 1>(x))
 
 template<typename T> constexpr inline std::size_t HeshType()
 { return HASH_STRING(__PRETTY_FUNCTION__); }
 
 
-namespace Detail
+namespace detail
 {
 template<bool IsNegative, auto reminder, auto... digits>
 struct NumberToStringImpl : NumberToStringImpl<IsNegative, reminder / 10, reminder % 10, digits...> {};
@@ -83,7 +83,7 @@ struct NumberToStringImpl<false, 0, digits...>
 }
 
 template<auto Number>
-struct NumberToString : Detail::NumberToStringImpl<(Number < 0), (Number < 0 ? -Number : Number) / 10, (Number < 0 ? -Number : Number) % 10>
+struct NumberToString : detail::NumberToStringImpl<(Number < 0), (Number < 0 ? -Number : Number) / 10, (Number < 0 ? -Number : Number) % 10>
 { static_assert(std::is_integral_v<decltype(Number)>, "Can't convert non integral values"); };
 
 template<auto Number>

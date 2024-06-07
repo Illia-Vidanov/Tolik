@@ -9,7 +9,7 @@
 
 namespace Tolik
 {
-namespace Detail
+namespace detail
 {
 	template<bool Condition> struct Warning{};
 	template<> struct __attribute__((deprecated)) Warning<false> { constexpr Warning() {} };
@@ -21,7 +21,7 @@ namespace Detail
 struct Empty { template<typename... Args> constexpr Empty(const Args&... args) {} };
 
 
-namespace Detail
+namespace detail
 {
 template<typename T>
 struct RemoveClassPointerImpl;
@@ -37,13 +37,13 @@ struct RemoveClassPointerImpl<T(U::*)(Args...)>
 
 template<typename T>
 struct RemoveClassPointer
-{ using type = typename Detail::RemoveClassPointerImpl<T>::type; };
+{ using type = typename detail::RemoveClassPointerImpl<T>::type; };
 
 template<typename T>
 using HelperRemoveClassPointer = typename RemoveClassPointer<T>::type;
 
 
-namespace Detail
+namespace detail
 {
 template<typename ReturnType, typename... Args>
 struct FunctorTraitsBase
@@ -80,11 +80,11 @@ struct FunctorTraitsImpl<ReturnType(&)(Args...)> : FunctorTraitsBase<ReturnType,
 }
 
 template<typename T>
-struct FunctorTraits : Detail::FunctorTraitsImpl<T>
+struct FunctorTraits : detail::FunctorTraitsImpl<T>
 {};
 
 
-namespace Detail
+namespace detail
 {
 	template<typename T, std::size_t N, template<std::size_t> typename F, std::size_t Index = N, T... Args>
 	struct GenerateArrayImpl
@@ -97,7 +97,7 @@ namespace Detail
 
 template<typename T, std::size_t N, template<std::size_t>typename F>
 struct GenerateArray
-{ inline constexpr static std::array<T, N> value = Detail::GenerateArrayImpl<T, N, F>::value; };
+{ inline constexpr static std::array<T, N> value = detail::GenerateArrayImpl<T, N, F>::value; };
 
 template<typename T, std::size_t N, template<std::size_t> typename F>
 std::array<T, N> HelperGenerateArray = GenerateArray<T, N, F>::value;
