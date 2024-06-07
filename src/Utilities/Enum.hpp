@@ -55,6 +55,6 @@ template<typename T, typename std::enable_if_t<std::is_enum_v<T>, bool> = true> 
 {
   return os << static_cast<std::underlying_type_t<T>>(self);
 }
-}
+} // Tolik
 
-#endif
+#endif // TOLIK_UTILITIES_ENUM_HPP

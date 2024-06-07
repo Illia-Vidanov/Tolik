@@ -60,7 +60,7 @@ constexpr uint32_t Crc32(const char *string)
 template<>
 constexpr uint32_t Crc32<std::size_t(-1)>(__attribute__((unused)) const char *string)
 { return 0xFFFFFFFF; }
-}
+} // detail
 
 #define HASH_STRING(x) (detail::Crc32<sizeof(x) - 1>(x))
 
@@ -80,7 +80,7 @@ struct NumberToStringImpl<true, 0, digits...>
 template<auto... digits>
 struct NumberToStringImpl<false, 0, digits...>
 { static constexpr char value[sizeof...(digits)] = { ('0' + digits)... }; };
-}
+} // detail
 
 template<auto Number>
 struct NumberToString : detail::NumberToStringImpl<(Number < 0), (Number < 0 ? -Number : Number) / 10, (Number < 0 ? -Number : Number) % 10>
@@ -88,6 +88,6 @@ struct NumberToString : detail::NumberToStringImpl<(Number < 0), (Number < 0 ? -
 
 template<auto Number>
 constexpr char *HelperNumberToString = NumberToString<Number>::value;
-}
+} // Tolik
 
-#endif
+#endif // TOLIK_UTILITIES_HASH_HPP

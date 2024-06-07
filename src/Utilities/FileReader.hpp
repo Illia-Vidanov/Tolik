@@ -15,6 +15,6 @@ public:
   static std::string GetExtention(const std::string &path);
   static inline bool FileExists(const std::string &path) { struct stat buffer; return (stat(path.c_str(), &buffer) == 0); }
 };
-}
+} // Tolik
 
-#endif
+#endif // TOLIK_UTILITIES_FILE_READER_HPP

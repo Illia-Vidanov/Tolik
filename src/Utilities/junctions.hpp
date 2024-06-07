@@ -73,4 +73,4 @@ disjunction<B, Args...>
 : std::integral_constant<bool, B || Conjunction<Args...>::value>
 {};
 
-#endif
+#endif // _gcem_junctions_HPP

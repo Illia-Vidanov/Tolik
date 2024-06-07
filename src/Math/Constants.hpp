@@ -11,6 +11,6 @@ using DefUIntType = uint32_t;
 
 constexpr inline DefFloatType PI = static_cast<DefFloatType>(3.141592);
 constexpr inline DefFloatType Elipson = static_cast<DefFloatType>(0.000001);
-}
+} // Tolik
 
-#endif
+#endif // TOLIK_MATH_CONSTANTS_HPP

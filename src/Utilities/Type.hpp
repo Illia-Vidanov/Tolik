@@ -13,7 +13,7 @@ namespace detail
 {
 	template<bool Condition> struct Warning{};
 	template<> struct __attribute__((deprecated)) Warning<false> { constexpr Warning() {} };
-}
+} // detail
 
 #define StaticWarn(x, ...) ((void) Warning<x>())
 
@@ -33,7 +33,7 @@ struct RemoveClassPointerImpl<T(Args...)>
 template<typename T, typename U, typename... Args>
 struct RemoveClassPointerImpl<T(U::*)(Args...)>
 { using type = T(Args...); };
-}
+} // detail
 
 template<typename T>
 struct RemoveClassPointer
@@ -77,7 +77,7 @@ struct FunctorTraitsImpl<ReturnType(*)(Args...)> : FunctorTraitsBase<ReturnType,
 template<typename ReturnType, typename... Args>
 struct FunctorTraitsImpl<ReturnType(&)(Args...)> : FunctorTraitsBase<ReturnType, Args...>
 {};
-}
+} // detail
 
 template<typename T>
 struct FunctorTraits : detail::FunctorTraitsImpl<T>
@@ -93,7 +93,7 @@ namespace detail
 	template<typename T, std::size_t N, template<std::size_t> typename F, T... Args>
 	struct GenerateArrayImpl<T, N, F, 0, Args...>
 	{ inline constexpr static std::array<T, N> value = std::array<T, N>{ Args... }; };
-}
+} // detail
 
 template<typename T, std::size_t N, template<std::size_t>typename F>
 struct GenerateArray
@@ -134,6 +134,6 @@ OPERATOR_CHECK_DEFENITION(<, OperatorType::LessThen);
 OPERATOR_CHECK_DEFENITION(>, OperatorType::MoreThen);
 template<OperatorType Operator, typename Type1, typename Type2 = Type1> inline constexpr bool HelperHasOperator = HasOperator<Operator, Type1, Type2>::value;
 */
-}
+} // Tolik
 
-#endif
+#endif // TOLIK_UTILITIES_TYPE_HPP

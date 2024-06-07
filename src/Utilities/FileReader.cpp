@@ -32,4 +32,4 @@ std::string FileReader::GetExtention(const std::string &path)
     return std::string(&path[dotPos + 1], &path[path.size()]);
   return std::string();
 }
-};
+} // Tolik

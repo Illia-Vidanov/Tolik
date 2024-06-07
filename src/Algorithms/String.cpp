@@ -26,4 +26,4 @@ std::vector<std::string> SplitString(const std::string &str, const std::string &
 	
 	return result;
 }
-}
+} // Tolik

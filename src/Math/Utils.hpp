@@ -75,7 +75,7 @@ constexpr inline T IntegralPowerImpl(const T base, const U exp)
     
     return IntegralPowerIterate(base, exp);
 }
-}
+} // detail
 
 // Function to power non-arithemtic type to exponent of non-arithmetic type.
 // If it's normal types std::pow is used.
@@ -120,7 +120,7 @@ constexpr inline DefFloatType kFastPower10NegativeLookup[] =
     static_cast<DefFloatType>(1) / gcem::pow<uint64_t, uint64_t>(10, 12), static_cast<DefFloatType>(1) / gcem::pow<uint64_t, uint64_t>(10, 13), static_cast<DefFloatType>(1) / gcem::pow<uint64_t, uint64_t>(10, 14), static_cast<DefFloatType>(1) / gcem::pow<uint64_t, uint64_t>(10, 15),
     static_cast<DefFloatType>(1) / gcem::pow<uint64_t, uint64_t>(10, 16), static_cast<DefFloatType>(1) / gcem::pow<uint64_t, uint64_t>(10, 17), static_cast<DefFloatType>(1) / gcem::pow<uint64_t, uint64_t>(10, 18), static_cast<DefFloatType>(1) / gcem::pow<uint64_t, uint64_t>(10, 19)
 };
-}
+} // detail
 
 // Function to get power of 10 with lookup
 template<typename T = DefIntType, typename U>
@@ -446,7 +446,7 @@ constexpr inline DefUIntType NumberDigitsImpl<unsigned long long>(unsigned long 
         return 2;
     return 1;
 }
-}
+} // detail
 
 // Get number of whole digits in any type
 // 0 = 0 digits
@@ -455,7 +455,7 @@ constexpr inline U NumberDigits(T t)
 {
     return t == 0 ? 0 : static_cast<U>(detail::NumberDigitsImpl(t));
 }
-}
+} // Tolik
 
 
-#endif
+#endif // TOLIK_MATH_UTILS_HPP
