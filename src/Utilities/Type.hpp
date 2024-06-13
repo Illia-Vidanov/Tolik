@@ -114,26 +114,24 @@ struct ArrayConstant
 };
 
 
-// Causes error with MinGW 13 where it can't find defenition of operator != between std::pair
-/*
-enum class OperatorType : uint8_t
-{
-	Equals, LessThen, MoreThen, NotEquals
-};
+template<typename... Args>
+struct MakeVoid
+{ using type = void; };
 
-template<OperatorType Operator, typename Type1, typename Type2 = Type1> struct HasOperator { enum { value = false }; };
+template<typename... Args>
+using HelperMakeVoid = typename MakeVoid<Args...>::type;
 
-#define OPERATOR_CHECK_DEFENITION(oper, operatorType)  \
-template<typename Type1, typename Type2> inline constexpr Empty operator oper (const Type1 &value1, const Type2 &value2); \
-template<typename Type1, typename Type2> struct HasOperator<operatorType, Type1, Type2> \
-: std::bool_constant<!std::is_same_v<decltype(std::declval<Type1>() oper std::declval<Type2>()), Empty>> {}
 
-OPERATOR_CHECK_DEFENITION(==, OperatorType::Equals);
-OPERATOR_CHECK_DEFENITION(!=, OperatorType::NotEquals);
-OPERATOR_CHECK_DEFENITION(<, OperatorType::LessThen);
-OPERATOR_CHECK_DEFENITION(>, OperatorType::MoreThen);
-template<OperatorType Operator, typename Type1, typename Type2 = Type1> inline constexpr bool HelperHasOperator = HasOperator<Operator, Type1, Type2>::value;
-*/
+template<typename T, typename U, typename = void>
+struct HasModulOperator : std::false_type
+{};
+
+template<typename T, typename U>
+struct HasModulOperator<T, U, HelperMakeVoid<decltype(std::declval<T>() % std::declval<U>())>> : std::true_type
+{};
+
+template<typename T, typename U>
+constexpr inline bool HelperHasModulOperator = HasModulOperator<T, U>::value;
 } // Tolik
 
 #endif // TOLIK_UTILITIES_TYPE_HPP

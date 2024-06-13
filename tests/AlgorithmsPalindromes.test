@@ -28,8 +28,6 @@ TEST(GetPalindromesDigitCountRangeTest, GetPalindromesDigitCountRangeCount)
     {
         static int count;
 
-        std::cout << i << ' ' << count << '\n';
-
         if(i == -1)
         {
             EXPECT_EQ(count, 1080);
@@ -98,7 +96,7 @@ TEST(GetValidRangesTest, GetValidRangesFrom2NumbersReturn)
 TEST(GetValidRangesFromNumberTest, GetValidRangesFrom2NumbersReturn)
 {
     const static std::vector<palindrome::DigitRange> right = { {0, 3}, {0, 3}, {1, 4}, {2, 3} };
-    std::vector<palindrome::DigitRange> result = palindrome::detail::GetValidRangesFromNumber(102000, 22392999);
+    std::vector<palindrome::DigitRange> result = palindrome::GetValidRangesFromNumber(102000, 22392999);
     EXPECT_EQ(right.size(), result.size());
     for(std::size_t i = 0; i < result.size(); i++)
     {
@@ -110,13 +108,60 @@ TEST(GetValidRangesFromNumberTest, GetValidRangesFrom2NumbersReturn)
 TEST(GetValidRangesFromNumberTest, GetValidRangesFrom1NumberReturn)
 {
     const static std::vector<palindrome::DigitRange> right = { {0, 3}, {0, 3}, {0, 4}, {0, 3} };
-    std::vector<palindrome::DigitRange> result = palindrome::detail::GetValidRangesFromNumber(22392999);
+    std::vector<palindrome::DigitRange> result = palindrome::GetValidRangesFromNumber(22392999);
     EXPECT_EQ(right.size(), result.size());
     for(std::size_t i = 0; i < result.size(); i++)
     {
         EXPECT_EQ(right[i].min, result[i].min);
         EXPECT_EQ(right[i].max, result[i].max);
     }
+}
+
+TEST(IsPalindromeTest, IsPalindromeReturn)
+{
+    EXPECT_TRUE(palindrome::IsPalindrome(0));
+    EXPECT_TRUE(palindrome::IsPalindrome(1));
+    EXPECT_TRUE(palindrome::IsPalindrome(11));
+    EXPECT_TRUE(palindrome::IsPalindrome(111));
+    EXPECT_TRUE(palindrome::IsPalindrome(12345654321));
+
+    EXPECT_TRUE(palindrome::IsPalindrome(-0));
+    EXPECT_TRUE(palindrome::IsPalindrome(-1));
+    EXPECT_TRUE(palindrome::IsPalindrome(-11));
+    EXPECT_TRUE(palindrome::IsPalindrome(-111));
+    EXPECT_TRUE(palindrome::IsPalindrome(-12345654321));
+
+    EXPECT_FALSE(palindrome::IsPalindrome(1234));
+    EXPECT_FALSE(palindrome::IsPalindrome(12334321));
+    EXPECT_FALSE(palindrome::IsPalindrome(10002));
+    EXPECT_FALSE(palindrome::IsPalindrome(1002));
+
+    EXPECT_FALSE(palindrome::IsPalindrome(-1234));
+    EXPECT_FALSE(palindrome::IsPalindrome(-12334321));
+    EXPECT_FALSE(palindrome::IsPalindrome(-10002));
+    EXPECT_FALSE(palindrome::IsPalindrome(-1002));
+
+    EXPECT_TRUE(palindrome::IsPalindrome(0.9999));
+    EXPECT_TRUE(palindrome::IsPalindrome(1.9999));
+    EXPECT_TRUE(palindrome::IsPalindrome(11.9999));
+    EXPECT_TRUE(palindrome::IsPalindrome(111.9999));
+    EXPECT_TRUE(palindrome::IsPalindrome(12345654321.9999));
+
+    EXPECT_TRUE(palindrome::IsPalindrome(-0.9999));
+    EXPECT_TRUE(palindrome::IsPalindrome(-1.9999));
+    EXPECT_TRUE(palindrome::IsPalindrome(-11.9999));
+    EXPECT_TRUE(palindrome::IsPalindrome(-111.9999));
+    EXPECT_TRUE(palindrome::IsPalindrome(-12345654321.9999));
+
+    EXPECT_FALSE(palindrome::IsPalindrome(1234.9999));
+    EXPECT_FALSE(palindrome::IsPalindrome(12334321.9999));
+    EXPECT_FALSE(palindrome::IsPalindrome(10002.9999));
+    EXPECT_FALSE(palindrome::IsPalindrome(1002.9999));
+
+    EXPECT_FALSE(palindrome::IsPalindrome(-1234.9999));
+    EXPECT_FALSE(palindrome::IsPalindrome(-12334321.9999));
+    EXPECT_FALSE(palindrome::IsPalindrome(-10002.9999));
+    EXPECT_FALSE(palindrome::IsPalindrome(-1002.9999));
 }
 
 int main(int argc, char **argv)

@@ -48,26 +48,33 @@ constexpr inline void GetPalindromesDigitCountRange(const DigitCountRange<T> &di
 template<typename Functor>
 constexpr inline void GetPalindromesDigitRange(const std::vector<DigitRange> &ranges, Functor callback);
 
-//template<typename T>
-//constexpr bool IsPalindrome(T number);
+template<typename T>
+constexpr bool IsPalindrome(T number);
 
-//template<typename T>
-//constexpr DefUIntType GetIndexOfPalindrome(T palindrome);
+// Interesting concept with palindrome indexing
+// If number given is not a palindrome, 0 is returned
+// Thus indexing starts with 1
+// Example: 353 = 9 * 3 + 1 + 5 + 1 = 33
+// Same as:
+template<typename T, typename U = DefIntType>
+constexpr U GetIndexOfPalindrome(T palindrome);
 
-//template<typename T = DefUIntType>
+// Interesting concept with palindrome indexing
+// If number given is not a palindrome, -1 is returned
+// Example: 33 = 353
+//template<typename T = DefIntType>
 //constexpr T GetPalindromeWithIndex(DefUIntType index);
 
-//template<typename T = DefUIntType>
-//constexpr inline T GetPalindromeCountInNDigitNumber(DefUIntType numberDigits) 
-//{ return 9 * gcem::pow(10, gcem::ceil(numberDigits / 2.0) - 1); }
+template<typename T = DefUIntType>
+constexpr inline T GetPalindromeCountInNDigitNumber(DefUIntType numberDigits) 
+{ return 9 * FastPower10(numberDigits / 2); }
 
-//template<typename T>
-//constexpr inline DefUIntType GetCountOfDigitsFromPalindromeIndex(T palindromeIndex)
-//{ return gcem::ceil(2 * gcem::log10(palindromeIndex / 9.0) + 2); }
+template<typename T>
+constexpr inline DefUIntType GetCountOfDigitsFromPalindromeIndex(T palindromeIndex)
+{ return gcem::ceil(2 * gcem::log10(palindromeIndex / 9.0) + 2); }
 
+// To be fair I am too lazy to implement some kind of aliases so here we have it, GetPalindromesFromValidRanges
 
-namespace detail
-{
 // Same as GetPalindromes(const std::vector<DigitRange> &ranges) but with valid ranges, that means half the amount of ranges that palindrome needs
 template<typename Functor>
 constexpr inline void GetPalindromesFromValidRanges(const std::vector<DigitRange> &validRanges, bool odd, Functor callback);
@@ -91,6 +98,9 @@ constexpr
 #endif
 inline auto GetValidRangesFromNumber(T min, U max) -> std::vector<DigitRange>;
 
+
+namespace detail
+{
 // Convert ranges from full to half size, because palindrome needs only them
 // Example: { {1, 3}, {2, 4}, {1, 6}, {2, 3}, {2, 3} } = { {2, 3}, {2, 3}, {1, 6} }
 // Same as:
@@ -152,7 +162,7 @@ constexpr void GetAllPalindromes(Functor callback)
         number = 0;
 	}
 
-	detail::IteratePalindromesRanging(number, std::numeric_limits<ReturnType>::digits10 + 1, std::numeric_limits<ReturnType>::digits10 + 1, detail::GetValidRangesFromNumber(std::numeric_limits<ReturnType>::max()), callback);
+	detail::IteratePalindromesRanging(number, std::numeric_limits<ReturnType>::digits10 + 1, std::numeric_limits<ReturnType>::digits10 + 1, GetValidRangesFromNumber(std::numeric_limits<ReturnType>::max()), callback);
 }
 
 template<typename T, typename Functor>
@@ -163,7 +173,7 @@ constexpr void GetPalindromesDigitCountRange(const DigitCountRange<T> &digitCoun
 	if(digitCountRange.min < 2 && 1 < digitCountRange.max)
 		callback(number);
 
-	// With c++20 I could have written std::is_constant_evaluated to avoid calling non constexpr function in constexpr variant
+	// With c++20 I could have written std::is_constant_evaluated to avoid calling non constexpr function in constexpr variant or even use StaticWarn
     if(std::numeric_limits<ReturnType>::is_specialized && std::numeric_limits<ReturnType>::digits10 < digitCountRange.max)
         std::cout << "Number might overflow"; // TODO: Use logger
     
@@ -185,10 +195,51 @@ constexpr void GetPalindromesDigitRange(const std::vector<DigitRange> &ranges, F
 	detail::IteratePalindromesRanging(number, ranges.size(), ranges.size(), detail::GetValidRanges(ranges), callback);
 }
 
-
-
-namespace detail
+template <typename T>
+constexpr bool IsPalindrome(T number)
 {
+	if(number < T(0))
+		return IsPalindrome(-number);
+
+	if(number == T(0))
+		return true;
+
+	T reversed = T(0);
+	const DefUIntType digits = DigitCount(number);
+	const DefUIntType halfDigits = (digits - 1) / 2;
+
+	for(int i = halfDigits; i >= 0; i--)
+		reversed = reversed + GetDigit(number, i) * FastPower10(halfDigits - i);
+
+	if constexpr(std::is_integral_v<T>)
+		return (number / FastPower10(digits / 2)) == reversed;
+
+	T result = number - reversed;
+	return result < T(1);
+}
+
+template <typename T, typename U>
+constexpr U GetIndexOfPalindrome(const T palindrome)
+{
+	if(!IsPalindrome(palindrome))
+		return U(-1);
+
+    const U result = U(0);
+	const DefUIntType halfDigits = (DigitCount(palindrome) + 1) / 2 - 1;
+	for(DefUIntType i = halfDigits; i >= 0; i--)
+	{
+		if(i > halfDigits - 1)
+		{
+			result = result + GetDigit(palindrome, i);
+			continue;
+		}
+
+		result = result + (GetDigit(palindrome, i) - 1) * GetPalindromeCountInNDigitNumber(i - halfDigits - 2);
+	}
+
+	return result;
+}
+
 template<typename Functor>
 constexpr void GetPalindromesFromValidRanges(const std::vector<DigitRange> &ranges, bool odd, Functor &&callback)
 {
@@ -208,7 +259,7 @@ constexpr
 #endif
 auto GetValidRangesFromNumber(T max) -> std::vector<DigitRange>
 {
-	const std::size_t n = NumberDigits(max);
+	const std::size_t n = DigitCount(max);
 	const std::size_t validRangesCount = (n + 1) / 2;
 	std::vector<DigitRange> validRanges(validRangesCount);
 
@@ -224,7 +275,7 @@ constexpr
 #endif
 auto GetValidRangesFromNumber(T min, U max) -> std::vector<DigitRange>
 {
-	const std::size_t n = NumberDigits(max);
+	const std::size_t n = DigitCount(max);
 	const std::size_t validRangesCount = (n + 1) / 2;
 	std::vector<DigitRange> validRanges(validRangesCount);
 
@@ -234,6 +285,8 @@ auto GetValidRangesFromNumber(T min, U max) -> std::vector<DigitRange>
 	return validRanges;
 }
 
+namespace detail
+{
 #if __cplusplus >= 202002L
 constexpr
 #endif

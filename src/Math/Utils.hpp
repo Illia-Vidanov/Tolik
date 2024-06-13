@@ -87,18 +87,6 @@ constexpr inline T IntegralPower(const T base, const U exp)
 }
 
 
-// Gets digit at index from number
-// If index is invalid 0 returned
-// Indexing starts at 0 and equals the same as (x / 10^index) % 10
-template<typename T = uint8_t, typename U, typename V>
-constexpr inline T GetDigit(U u, V index)
-{
-    // We might get "signal SIGFPE, Arithmetic exception." if we skip this line
-    if(index < 0)
-        return 0;
-    return U(u / IntegralPower(U(10), index)) % U(10);
-}
-
 
 namespace detail
 {
@@ -123,17 +111,18 @@ constexpr inline DefFloatType kFastPower10NegativeLookup[] =
 } // detail
 
 // Function to get power of 10 with lookup
+// If exponent might be floatin-point specialize return value
+// Example: FastPower10<float>(2.3);
 template<typename T = DefIntType, typename U>
-#if __cplusplus >= 202002L
-constexpr
-#endif
-inline T FastPower10(U exp)
+constexpr inline T FastPower10(U exp)
 {
-    if constexpr(!std::is_arithmetic_v<T> || !std::is_arithmetic_v<U>)
+    if constexpr(!std::is_integral_v<U>)
+        return gcem::pow(T(10), exp);
+    if constexpr(!std::is_arithmetic_v<T>)
         return IntegralPower(T(10), exp);
     else if(std::is_signed_v<U>)
     {
-        if(exp < U(0))
+        if(exp < U(0) && -20 < exp)
             return detail::kFastPower10NegativeLookup[-exp];
         else if(U(19) < exp)
             return IntegralPower(T(10), exp);
@@ -145,6 +134,28 @@ inline T FastPower10(U exp)
         return IntegralPower(T(10), exp);
     else
         return detail::kFastPower10PositiveLookup<T>[exp];
+}
+
+
+// Gets digit at index from number
+// If index is invalid 0 returned
+// Indexing starts at 0 and equals the same as (x / 10^index) % 10
+template<typename T = uint8_t, typename U, typename V, std::enable_if_t<!std::is_floating_point_v<U>, bool> = true>
+constexpr inline T GetDigit(U u, V index)
+{
+    // We might get division by 0 if we skip this line
+    if(index < 0)
+        return 0;
+    return (u / FastPower10(index)) % U(10);
+}
+
+// Gets digit at index from number
+// If index is invalid 0 returned
+// Indexing starts at 0 and equals the same as (x / 10^index) % 10
+template<typename T = uint8_t, typename U, typename V, std::enable_if_t<std::is_floating_point_v<U>, bool> = false>
+constexpr inline T GetDigit(U u, V index)
+{
+    return GetDigit(static_cast<long long>(u), index);
 }
 
 
@@ -174,10 +185,10 @@ constexpr inline T GetDigitSubstring(T digit, U first, U last)
 namespace detail
 {
 template <typename T>
-constexpr inline DefUIntType NumberDigitsImpl(T t)
+constexpr inline DefUIntType DigitCountImpl(T t)
 {
     if(t < T(0))
-        return NumberDigitsImpl(-t);
+        return DigitCountImpl(-t);
     DefUIntType digits = 0;
     while(T(0) < t)
     {
@@ -188,26 +199,26 @@ constexpr inline DefUIntType NumberDigitsImpl(T t)
 }
 
 template<>
-inline DefUIntType NumberDigitsImpl<char>(char t)
+inline DefUIntType DigitCountImpl<char>(char t)
 {
     if(t < 0)
-        return NumberDigitsImpl<char>(-t);
+        return DigitCountImpl<char>(-t);
     
     static const char x[128] = { 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3 };
     return x[static_cast<unsigned char>(t)];
 }
 template<>
-inline DefUIntType NumberDigitsImpl<unsigned char>(unsigned char t)
+inline DefUIntType DigitCountImpl<unsigned char>(unsigned char t)
 {
     static const unsigned char x[256] = { 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3 };
     return x[t];
 }
 
 template<>
-constexpr inline DefUIntType NumberDigitsImpl<short>(short t)
+constexpr inline DefUIntType DigitCountImpl<short>(short t)
 {
     if(t < 0)
-        return NumberDigitsImpl<short>(-t);
+        return DigitCountImpl<short>(-t);
     
     if(t >= 100)
     {
@@ -227,7 +238,7 @@ constexpr inline DefUIntType NumberDigitsImpl<short>(short t)
     }
 }
 template<>
-constexpr inline DefUIntType NumberDigitsImpl<unsigned short>(unsigned short t)
+constexpr inline DefUIntType DigitCountImpl<unsigned short>(unsigned short t)
 {
     if(t >= 100)
     {
@@ -248,9 +259,9 @@ constexpr inline DefUIntType NumberDigitsImpl<unsigned short>(unsigned short t)
 }
 
 template<>
-constexpr inline DefUIntType NumberDigitsImpl<int>(int t)
+constexpr inline DefUIntType DigitCountImpl<int>(int t)
 {
-    if(t < 0) return NumberDigitsImpl<int>(-t);
+    if(t < 0) return DigitCountImpl<int>(-t);
 
     if(t >= 100000)
     {
@@ -284,7 +295,7 @@ constexpr inline DefUIntType NumberDigitsImpl<int>(int t)
 }
 
 template<>
-constexpr inline DefUIntType NumberDigitsImpl<unsigned int>(unsigned int t)
+constexpr inline DefUIntType DigitCountImpl<unsigned int>(unsigned int t)
 {
     if(t >= 100000)
     {
@@ -318,10 +329,10 @@ constexpr inline DefUIntType NumberDigitsImpl<unsigned int>(unsigned int t)
 }
 
 template<>
-constexpr inline DefUIntType NumberDigitsImpl<long long>(long long t)
+constexpr inline DefUIntType DigitCountImpl<long long>(long long t)
 {
     if(t < 0)
-        return NumberDigitsImpl<long long>(-t);
+        return DigitCountImpl<long long>(-t);
 
     if(t >= 10000000000)
     {
@@ -382,7 +393,7 @@ constexpr inline DefUIntType NumberDigitsImpl<long long>(long long t)
     return 1;
 }
 template<>
-constexpr inline DefUIntType NumberDigitsImpl<unsigned long long>(unsigned long long t)
+constexpr inline DefUIntType DigitCountImpl<unsigned long long>(unsigned long long t)
 {
     if(t >= 10000000000)
     {
@@ -450,11 +461,28 @@ constexpr inline DefUIntType NumberDigitsImpl<unsigned long long>(unsigned long 
 
 // Get number of whole digits in any type
 // 0 = 0 digits
-template<typename U = DefUIntType, typename T>
-constexpr inline U NumberDigits(T t)
+template<typename T = DefUIntType, typename U>
+constexpr inline T DigitCount(U number)
 {
-    return t == 0 ? 0 : static_cast<U>(detail::NumberDigitsImpl(t));
+    return number == 0 ? 0 : static_cast<T>(detail::DigitCountImpl(number));
 }
+
+
+//template<typename T>
+//constexpr inline bool IsMathematicallyIntegral(T t)
+//{
+//    DefFloatType result = gcem::cos(2 * t * GCEM_PI);
+//    return result == 1;
+//}
+//
+//
+//template<typename T = DefUIntType, typename U>
+//constexpr inline T DigitCountAfterPoint(U number)
+//{
+//    T result = T(0);
+//    while(!IsMathematicallyIntegral(number))
+//}
+
 } // Tolik
 
 
