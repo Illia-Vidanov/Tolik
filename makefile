@@ -2,7 +2,7 @@
 
 # Directories
 SOURCEDIR := src
-LIBDIR := libs
+IGNORE_DIRS :=
 BUILDDIR := build/lib
 OBJSDIR := build/objs
 
@@ -11,7 +11,7 @@ APP_NAME :=
 DEBUG := -g
 COMPILER := g++ -x c++
 FLAGS := -Wall -fmax-errors=10 -Wshadow -std=c++17 #-funroll-loops
-LIBS := -I$(LIBDIR)/Eigen -I$(LIBDIR)/gcem
+LIBS := -IEigen -Igcem
 INCLUDES := -I$(SOURCEDIR)
 ARGS :=
 ECHO := @
@@ -28,8 +28,8 @@ MAKEFILE_NAME := makefile
 
 # Note: I use findutils to locate files
 
-# Find all folders in $(SOURCEDIR)
-SOURCE_FOLDERS := $(shell find $(SOURCEDIR) -type d)
+# Find all folders in $(SOURCEDIR) ignoring $(IGNORE_DIRS)
+SOURCE_FOLDERS := $(shell find $(SOURCEDIR) $(foreach dir,$(IGNORE_DIRS),-wholename $(dir) -prune -o ) -type d -print)
 
 # Creates folders for object files and by replacing $(SOURCEDIR) to $(OBJSDIR) (using folder structure in order to prevent collisions between files with same name)
 $(foreach folder,$(SOURCE_FOLDERS),$(shell mkdir -p $(subst $(SOURCEDIR),$(OBJSDIR),$(folder))))
