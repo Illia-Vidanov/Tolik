@@ -3,14 +3,14 @@
 # Directories
 SOURCEDIR := src
 IGNORE_DIRS :=
-BUILDDIR := build/lib
+BUILDDIR := build
 OBJSDIR := build/objs
 
 # Variables
 APP_NAME :=
 DEBUG := -g
 COMPILER := g++ -x c++
-FLAGS := -Wall -fmax-errors=10 -Wshadow -std=c++17 #-funroll-loops
+FLAGS := -Wall -Wextra -Wdeprecated -pedantic-errors -fmax-errors=10 -Wshadow -std=c++17 #-funroll-loops
 LIBS := -IEigen -Igcem
 INCLUDES := -I$(SOURCEDIR)
 ARGS :=

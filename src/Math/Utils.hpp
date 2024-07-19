@@ -8,6 +8,7 @@
 
 #include "Setup.hpp"
 #include "Math/Constants.hpp"
+#include "Utilities/Type.hpp"
 
 namespace Tolik
 {
@@ -18,16 +19,16 @@ using ReturnFloatType = std::conditional_t<std::is_integral_v<T>, DefFloatType, 
 
 template<typename T>
 constexpr inline ReturnFloatType<T> DegreesToRadians(T degrees)
-{ return degrees * (PI / 180); }
+{ return degrees * (kPI / 180); }
 
 template<typename T>
 constexpr inline ReturnFloatType<T> RadiansToDegrees(T radians)
-{ return radians * (180 / PI); }
+{ return radians * (180 / kPI); }
 
 
 template<typename T, typename U>
 constexpr inline bool AreSame(T t, U u)
-{ return gcem::abs(t - u) < Elipson; }
+{ return gcem::abs(t - u) < kElipson; }
 
 // Shorthand of writing (std::numeric_limits<T>::digits10 + 1)
 template<typename T>
@@ -38,42 +39,81 @@ namespace detail
 {
 // https://en.wikipedia.org/wiki/Exponentiation_by_squaring
 
-// Exponent here can be only positive, thus unsigned long long
-template<typename T, typename U, std::enable_if_t<std::is_convertible_v<U, uint64_t>, bool> = true>
-constexpr T IntegralPowerIterate(const T base, const U exp)
+// Using looping approach because recursion is often slow
+
+template<typename T, typename U>
+constexpr inline T IntegralPowerImplUHasNoModulo(const T base, U exp)
 {
-    // Use cast in case, for example float, or custom defined type, idk
-    if(static_cast<uint64_t>(exp) == 1)
-        return base;
-    
-    if(static_cast<uint64_t>(exp) % 2 == 0)
-        return IntegralPowerIterate(base * base, static_cast<uint64_t>(exp) / 2);
-    //                                      rounds to 0 automatically
-    return base * IntegralPowerIterate(base * base, static_cast<uint64_t>(exp) / 2);
+    T result = base;
+
+    while(U(2) < exp || exp == U(2))
+    {
+        result = result * base;
+        exp = exp - 1;
+    }
+
+    return result;
 }
 
-template<typename T, typename U, std::enable_if_t<!std::is_convertible_v<U, uint64_t>, bool> = true>
-constexpr T IntegralPowerIterate(const T base, const U exp)
+template<typename T, typename U>
+constexpr inline T IntegralPowerImplUHasModulo(T base, U exp)
 {
-    if(exp < 2)
-        return base;
+    T result = base;
+    base = T(1);
 
-    return base * IntegralPowerIterate(base, exp - 1);
+    while(U(2) < exp || exp == U(2))
+    {
+        if(exp % U(2) == U(0))
+        {
+            result = result * result;
+            exp = exp / 2;
+            continue;
+        }
+
+        base = base * result;
+        result = result * result;
+        exp = (exp - U(1)) / U(2);
+    }
+
+    return result * base;
 }
 
 template<typename T, typename U, std::enable_if_t<std::is_arithmetic_v<T> && std::is_arithmetic_v<U>, bool> = true>
-constexpr inline T IntegralPowerImpl(const T base, const U exp) { return std::pow(base, exp); }
+constexpr inline T IntegralPowerImpl(const T base, const U exp) { return gcem::pow(base, exp); }
 
-template<typename T, typename U, std::enable_if_t<!std::is_arithmetic_v<T>, bool> = true>
+template<typename T, typename U, std::enable_if_t<!std::is_arithmetic_v<U> && !kHasModulOperator<U>, bool> = true>
 constexpr inline T IntegralPowerImpl(const T base, const U exp)
 {
     // Special type might be signed
-    if(exp < 0)
-        return T(1) / IntegralPowerImpl(base, -exp);
-    if(exp == 0)
+    if(exp == U(0))
+        return 1;
+    if(exp < U(0))
+        return T(1) / IntegralPowerImplUHasNoModulo(base, -exp);
+    
+    return IntegralPowerImplUHasNoModulo(base, exp);
+}
+
+template<typename T, typename U, std::enable_if_t<(std::is_arithmetic_v<U> || kHasModulOperator<U>) && !std::is_signed_v<U>, bool> = true>
+constexpr inline T IntegralPowerImpl(const T base, const U exp)
+{
+    // Special type might be signed
+    if(exp == U(0))
         return 1;
     
-    return IntegralPowerIterate(base, exp);
+    return IntegralPowerImplUHasModulo(base, exp);
+}
+
+template<typename T, typename U, std::enable_if_t<(std::is_arithmetic_v<U> || kHasModulOperator<U>) && std::is_signed_v<U>, bool> = true>
+constexpr inline T IntegralPowerImpl(const T base, const U exp)
+{
+    // Special type might be signed
+    if(exp == 0)
+        return 1;
+    // static cast in case for float for example
+    if(exp < 0)
+        return T(1) / IntegralPowerImplUHasModulo(base, static_cast<uint64_t>(-exp));
+    
+    return IntegralPowerImplUHasModulo(base, exp);
 }
 } // detail
 
@@ -122,12 +162,11 @@ constexpr inline T FastPower10(U exp)
         return IntegralPower(T(10), exp);
     else if(std::is_signed_v<U>)
     {
-        if(exp < U(0) && -20 < exp)
-            return detail::kFastPower10NegativeLookup[-exp];
-        else if(U(19) < exp)
+        if(19 < exo || exp < -19)
             return IntegralPower(T(10), exp);
-        else
-            return detail::kFastPower10PositiveLookup<T>[exp];
+        else if(exp < 0)
+            return detail::kFastPower10NegativeLookup[-exp];
+        return detail::kFastPower10PositiveLookup<T>[exp];
     }
 
     if(U(19) < exp)
@@ -139,6 +178,7 @@ constexpr inline T FastPower10(U exp)
 
 // Gets digit at index from number
 // If index is invalid 0 returned
+// If value is floating point, fraction part is ignored, by casting value to long long
 // Indexing starts at 0 and equals the same as (x / 10^index) % 10
 template<typename T = uint8_t, typename U, typename V, std::enable_if_t<!std::is_floating_point_v<U>, bool> = true>
 constexpr inline T GetDigit(U u, V index)
@@ -149,24 +189,22 @@ constexpr inline T GetDigit(U u, V index)
     return (u / FastPower10(index)) % U(10);
 }
 
-// Gets digit at index from number
-// If index is invalid 0 returned
-// Indexing starts at 0 and equals the same as (x / 10^index) % 10
-template<typename T = uint8_t, typename U, typename V, std::enable_if_t<std::is_floating_point_v<U>, bool> = false>
+template<typename T = uint8_t, typename U, typename V, std::enable_if_t<std::is_floating_point_v<U>, bool> = true>
 constexpr inline T GetDigit(U u, V index)
 {
     return GetDigit(static_cast<long long>(u), index);
 }
 
 
-// Get substring from digit
-// Same as (digit / 10^first) % 10^last
-// first digit inclusive, last exclusive
-// Example: first = 1, last = 5, digit = 6543210 => 4321;
-//          first = 4, last = 8, digit = -6543210 => 654;
-//          first = -10, last = 5, digit = -6543210 => 43210;
-template<typename T, typename U>
-constexpr inline T GetDigitSubstring(T digit, U first, U last)
+// Get substring from number
+// Same as (number / 10^first) % 10^last
+// first number inclusive, last exclusive
+// Example: first = 1, last = 5, number = 6543210 => 4321;
+//          first = 4, last = 8, number = -6543210 => 654;
+//          first = -10, last = 5, number = -6543210 => 43210;
+// If number is floating point, fraction part is ignored by casting value to long long
+template<typename T, typename U, std::enable_if_t<!std::is_floating_point_v<T>, bool> = true>
+constexpr inline T GetDigitSubstring(T number, U first, U last)
 {
     // I am not  sure about this line.
     // It might be better to throw an error, but it means we need to check for it anyway, so I would prefer doing it this way
@@ -178,7 +216,13 @@ constexpr inline T GetDigitSubstring(T digit, U first, U last)
     if(first >= last)
         return 0;
 
-    return (digit / IntegralPower(10, first)) % IntegralPower(10, last - first);
+    return (number / IntegralPower(10, first)) % IntegralPower(10, last - first);
+}
+
+template<typename T, typename U, std::enable_if_t<std::is_floating_point_v<T>, bool> = true>
+constexpr inline T GetDigitSubstring(T number, U first, U last)
+{
+    return GetDigitSubstring(static_cast<long long>(number), first, last);
 }
 
 

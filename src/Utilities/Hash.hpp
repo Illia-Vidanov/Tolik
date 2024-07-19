@@ -87,7 +87,7 @@ struct NumberToString : detail::NumberToStringImpl<(Number < 0), (Number < 0 ? -
 { static_assert(std::is_integral_v<decltype(Number)>, "Can't convert non integral values"); };
 
 template<auto Number>
-constexpr char *HelperNumberToString = NumberToString<Number>::value;
+constexpr char *number_to_string = NumberToString<Number>::value;
 } // Tolik
 
 #endif // TOLIK_UTILITIES_HASH_HPP
